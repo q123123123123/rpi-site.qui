@@ -881,5 +881,43 @@
             updatePowerSimulation();
         };
     </script>
+    <!-- Kiosk Afsluitknop -->
+<button onclick="sluitApparaatAf()" class="shutdown-btn">
+  🔌 Apparaat Afsluiten
+</button>
+
+<script>
+function sluitApparaatAf() {
+  if (confirm("Weet je zeker dat je de Raspberry Pi wilt uitschakelen?")) {
+    // 1. Controleer of Fully Kiosk JS Interface actief is
+    if (typeof fully !== 'undefined') {
+      // Schakelt het apparaat uit (voor Android / Raspberry Pi builds)
+      fully.shutdown(); 
+      // Of als je alleen wilt herstarten:
+      // fully.reboot();
+    } else {
+      alert("Fully Kiosk JS Interface is niet gedetecteerd.");
+    }
+  }
+}
+</script>
+
+<style>
+.shutdown-btn {
+  background: #ff4444;
+  color: white;
+  border: none;
+  padding: 12px 24px;
+  font-size: 1.1rem;
+  font-weight: bold;
+  border-radius: 8px;
+  cursor: pointer;
+  box-shadow: 0 4px 10px rgba(255, 68, 68, 0.4);
+}
+.shutdown-btn:hover {
+  background: #cc0000;
+}
+</style>
+
 </body>
 </html>
