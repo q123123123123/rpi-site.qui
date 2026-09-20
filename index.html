@@ -1,0 +1,891 @@
+<!DOCTYPE html>
+<html lang="nl" class="h-full bg-slate-950 text-slate-100 dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quintens Elektrodoos - Kiosk Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;800&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/js/all.min.js"></script>
+    
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace'],
+                    },
+                    colors: {
+                        neon: {
+                            blue: '#00f0ff',
+                            green: '#00ff66',
+                            amber: '#ffaa00',
+                            red: '#ff0055',
+                            purple: '#b026ff'
+                        }
+                    },
+                    boxShadow: {
+                        'neon-blue': '0 0 20px rgba(0, 240, 255, 0.4)',
+                        'neon-green': '0 0 20px rgba(0, 255, 102, 0.4)',
+                        'neon-amber': '0 0 20px rgba(255, 170, 0, 0.4)',
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        /* Custom Keyframe Animations */
+        @keyframes fanSpin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+
+        .fan-blade-spin {
+            animation: fanSpin linear infinite;
+        }
+
+        @keyframes pulseGlow {
+            0%, 100% { opacity: 0.8; filter: drop-shadow(0 0 8px rgba(0,240,255,0.8)); }
+            50% { opacity: 0.4; filter: drop-shadow(0 0 2px rgba(0,240,255,0.3)); }
+        }
+
+        .pulse-neon {
+            animation: pulseGlow 2.5s infinite;
+        }
+
+        /* Custom Scrollbar for Kiosk Touch Screens */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #090d16;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #1e293b;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #00f0ff;
+        }
+
+        .glass-panel {
+            background: rgba(15, 23, 42, 0.75);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .glass-card {
+            background: rgba(30, 41, 59, 0.5);
+            backdrop-filter: blur(8px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+
+        /* Prevent text selection in Kiosk mode */
+        .no-select {
+            user-select: none;
+            -webkit-user-select: none;
+        }
+    </style>
+</head>
+<body class="h-full flex flex-col font-sans overflow-hidden bg-slate-950 text-slate-100 no-select">
+
+    <header class="h-20 glass-panel border-b border-slate-800 px-6 flex items-center justify-between z-20 shrink-0">
+        <div class="flex items-center space-x-4">
+            <div class="p-3 bg-cyan-500/10 border border-cyan-500/30 rounded-xl text-cyan-400 text-2xl shadow-neon-blue">
+                <i class="fa-solid fa-plug"></i>
+            </div>
+            <div>
+                <div class="flex items-center gap-3">
+                    <h1 class="text-2xl font-extrabold tracking-wide text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-teal-300 to-emerald-400">
+                        QUINTENS ELEKTRODOOS
+                    </h1>
+                    <span class="px-2.5 py-0.5 text-xs font-semibold bg-emerald-500/20 border border-emerald-500/40 text-emerald-400 rounded-full">
+                        <i class="fa-solid fa-bolt mr-1"></i> 5V USB Powered
+                    </span>
+                </div>
+                <p class="text-xs text-slate-400">
+                    Een Creatief USB & Modulair Elektronica Project door <span class="text-cyan-300 font-semibold">Quinten Muskens</span> (13 jaar)
+                </p>
+            </div>
+        </div>
+
+        <!-- Clock & Fullscreen Controls -->
+        <div class="flex items-center space-x-6">
+            <div class="text-right hidden sm:block">
+                <div id="live-time" class="font-mono text-2xl font-bold text-cyan-400 tracking-wider">12:00:00</div>
+                <div id="live-date" class="text-xs text-slate-400 font-medium">Maandag 20 September 2026</div>
+            </div>
+
+            <button id="fullscreen-btn" onclick="toggleFullscreen()" class="p-3 bg-slate-800 hover:bg-slate-700 active:bg-cyan-600/30 border border-slate-700 text-slate-300 rounded-xl transition flex items-center gap-2 text-sm">
+                <i class="fa-solid fa-expand text-cyan-400"></i>
+                <span class="hidden md:inline">Volledig Scherm</span>
+            </button>
+        </div>
+    </header>
+
+    <nav class="bg-slate-900/80 border-b border-slate-800/80 px-6 py-2.5 flex justify-between items-center gap-2 overflow-x-auto z-10 shrink-0">
+        <div class="flex gap-2 min-w-max">
+            <button onclick="switchTab('dashboard')" id="tab-btn-dashboard" class="tab-btn px-5 py-2.5 rounded-xl font-semibold text-sm transition flex items-center gap-2 bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 shadow-neon-blue">
+                <i class="fa-solid fa-gauge-high"></i> Control Dashboard
+            </button>
+            <button onclick="switchTab('fan-lab')" id="tab-btn-fan-lab" class="tab-btn px-5 py-2.5 rounded-xl font-semibold text-sm transition flex items-center gap-2 bg-slate-800/60 text-slate-400 border border-transparent hover:text-slate-200">
+                <i class="fa-solid fa-fan"></i> PC-Fan Simulatie
+            </button>
+            <button onclick="switchTab('components')" id="tab-btn-components" class="tab-btn px-5 py-2.5 rounded-xl font-semibold text-sm transition flex items-center gap-2 bg-slate-800/60 text-slate-400 border border-transparent hover:text-slate-200">
+                <i class="fa-solid fa-microchip"></i> Onderdelen
+            </button>
+            <button onclick="switchTab('education')" id="tab-btn-education" class="tab-btn px-5 py-2.5 rounded-xl font-semibold text-sm transition flex items-center gap-2 bg-slate-800/60 text-slate-400 border border-transparent hover:text-slate-200">
+                <i class="fa-solid fa-graduation-cap"></i> Hoe Werkt Het?
+            </button>
+        </div>
+
+        <div class="flex items-center gap-2 text-xs font-mono text-slate-400">
+            <span class="inline-block w-2.5 h-2.5 rounded-full bg-emerald-400 animate-ping"></span>
+            KIOSK ACTIEF
+        </div>
+    </nav>
+
+    <main class="flex-1 overflow-y-auto p-4 md:p-6 relative">
+
+        <!-- ==================== TAB 1: DASHBOARD ==================== -->
+        <div id="tab-dashboard" class="tab-content space-y-6 max-w-7xl mx-auto">
+            
+            <!-- Top Status Grid -->
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <!-- Power Status Card -->
+                <div class="glass-card p-5 rounded-2xl border-l-4 border-l-emerald-500 flex justify-between items-center">
+                    <div>
+                        <p class="text-xs uppercase tracking-wider text-slate-400 font-semibold">Hoofdvoeding (USB)</p>
+                        <h3 id="stat-voltage" class="text-2xl font-bold font-mono text-emerald-400 mt-1">5.00 V</h3>
+                        <p class="text-xs text-slate-400 mt-1">Standaard USB Spanning</p>
+                    </div>
+                    <div class="p-3 rounded-xl bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-2xl">
+                        <i class="fa-solid fa-bolt"></i>
+                    </div>
+                </div>
+
+                <!-- Current Consumption -->
+                <div class="glass-card p-5 rounded-2xl border-l-4 border-l-cyan-500 flex justify-between items-center">
+                    <div>
+                        <p class="text-xs uppercase tracking-wider text-slate-400 font-semibold">Stroomverbruik</p>
+                        <h3 id="stat-current" class="text-2xl font-bold font-mono text-cyan-400 mt-1">0.85 A</h3>
+                        <p class="text-xs text-slate-400 mt-1"><span id="stat-wattage" class="text-slate-200">4.25</span> Watt Totaal</p>
+                    </div>
+                    <div class="p-3 rounded-xl bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 text-2xl">
+                        <i class="fa-solid fa-wave-square"></i>
+                    </div>
+                </div>
+
+                <!-- Active Modules -->
+                <div class="glass-card p-5 rounded-2xl border-l-4 border-l-amber-500 flex justify-between items-center">
+                    <div>
+                        <p class="text-xs uppercase tracking-wider text-slate-400 font-semibold">Actieve Modules</p>
+                        <h3 id="stat-modules-count" class="text-2xl font-bold font-mono text-amber-400 mt-1">3 / 4</h3>
+                        <p class="text-xs text-slate-400 mt-1">Ingeladen USB-verbindingen</p>
+                    </div>
+                    <div class="p-3 rounded-xl bg-amber-500/10 text-amber-400 border border-amber-500/20 text-2xl">
+                        <i class="fa-solid fa-cubes"></i>
+                    </div>
+                </div>
+
+                <!-- Safety Status -->
+                <div class="glass-card p-5 rounded-2xl border-l-4 border-l-blue-500 flex justify-between items-center">
+                    <div>
+                        <p class="text-xs uppercase tracking-wider text-slate-400 font-semibold">Systeem Status</p>
+                        <h3 class="text-xl font-bold text-blue-400 mt-1 flex items-center gap-2">
+                            <i class="fa-solid fa-circle-check text-emerald-400 text-base"></i> Veilig
+                        </h3>
+                        <p class="text-xs text-slate-400 mt-1">Geen Overbelasting</p>
+                    </div>
+                    <div class="p-3 rounded-xl bg-blue-500/10 text-blue-400 border border-blue-500/20 text-2xl">
+                        <i class="fa-solid fa-shield-halved"></i>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Main Interactive Controls -->
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                
+                <!-- USB Power Hub Controls -->
+                <div class="lg:col-span-2 glass-panel p-6 rounded-2xl border border-slate-800">
+                    <div class="flex items-center justify-between mb-6">
+                        <div class="flex items-center gap-3">
+                            <div class="p-2.5 rounded-lg bg-cyan-500/10 text-cyan-400 border border-cyan-500/30">
+                                <i class="fa-solid fa-sliders"></i>
+                            </div>
+                            <div>
+                                <h2 class="text-lg font-bold text-slate-100">Interactive USB Verdeeldoos</h2>
+                                <p class="text-xs text-slate-400">Schakel stekkertjes in/uit en bekijk het live effect</p>
+                            </div>
+                        </div>
+                        <button onclick="toggleAllModules()" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-xs font-semibold text-slate-300 rounded-lg border border-slate-700 transition">
+                            <i class="fa-solid fa-power-off text-amber-400 mr-1"></i> Alles Schakelen
+                        </button>
+                    </div>
+
+                    <!-- Interactive Module Switches -->
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        
+                        <!-- Module 1: Fans -->
+                        <div class="glass-card p-4 rounded-xl border border-slate-800 flex items-center justify-between">
+                            <div class="flex items-center gap-3">
+                                <div id="icon-mod-fan" class="p-3 rounded-xl bg-cyan-500/20 text-cyan-400 text-xl">
+                                    <i class="fa-solid fa-fan animate-spin"></i>
+                                </div>
+                                <div>
+                                    <h4 class="font-bold text-slate-200 text-sm">PC-Fan Module 12V→5V</h4>
+                                    <p class="text-xs text-slate-400">Verbruik: ~0.35 A (1.75W)</p>
+                                </div>
+                            </div>
+                            <label class="relative inline-flex items-center cursor-pointer">
+                                <input type="checkbox" id="switch-fan" class="sr-only peer" checked onchange="updatePowerSimulation()">
+                                <div class="w-11 h-6 bg-slate-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-cyan-500"></div>
+                            </label>
+                        </div>
+
+                        <!-- Module 2: LED Light Strip -->
+                        <div class="glass-card p-4 rounded-xl border border-slate-800 flex items-center justify-between">
+                            <div class="flex items-center gap-3">
+                                <div id="icon-mod-led" class="p-3 rounded-xl bg-amber-500/20 text-amber-400 text-xl shadow-neon-amber">
+                                    <i class="fa-solid fa-lightbulb"></i>
+                                </div>
+                                <div>
+                                    <h4 class="font-bold text-slate-200 text-sm">USB LED Strip (Neon Amber)</h4>
+                                    <p class="text-xs text-slate-400">Verbruik: ~0.40 A (2.00W)</p>
+                                </div>
+                            </div>
+                            <label class="relative inline-flex items-center cursor-pointer">
+                                <input type="checkbox" id="switch-led" class="sr-only peer" checked onchange="updatePowerSimulation()">
+                                <div class="w-11 h-6 bg-slate-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-amber-500"></div>
+                            </label>
+                        </div>
+
+                        <!-- Module 3: Mini Spotlight -->
+                        <div class="glass-card p-4 rounded-xl border border-slate-800 flex items-center justify-between">
+                            <div class="flex items-center gap-3">
+                                <div id="icon-mod-spot" class="p-3 rounded-xl bg-emerald-500/20 text-emerald-400 text-xl">
+                                    <i class="fa-solid fa-sun"></i>
+                                </div>
+                                <div>
+                                    <h4 class="font-bold text-slate-200 text-sm">USB Mini Spot-Lampje</h4>
+                                    <p class="text-xs text-slate-400">Verbruik: ~0.10 A (0.50W)</p>
+                                </div>
+                            </div>
+                            <label class="relative inline-flex items-center cursor-pointer">
+                                <input type="checkbox" id="switch-spot" class="sr-only peer" checked onchange="updatePowerSimulation()">
+                                <div class="w-11 h-6 bg-slate-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-500"></div>
+                            </label>
+                        </div>
+
+                        <!-- Module 4: Extra USB Jack -->
+                        <div class="glass-card p-4 rounded-xl border border-slate-800 flex items-center justify-between">
+                            <div class="flex items-center gap-3">
+                                <div id="icon-mod-extra" class="p-3 rounded-xl bg-slate-800 text-slate-500 text-xl">
+                                    <i class="fa-solid fa-plug-circle-plus"></i>
+                                </div>
+                                <div>
+                                    <h4 class="font-bold text-slate-200 text-sm">Extra Stekker / AUX Port</h4>
+                                    <p class="text-xs text-slate-400">Verbruik: ~0.25 A (1.25W)</p>
+                                </div>
+                            </div>
+                            <label class="relative inline-flex items-center cursor-pointer">
+                                <input type="checkbox" id="switch-extra" class="sr-only peer" onchange="updatePowerSimulation()">
+                                <div class="w-11 h-6 bg-slate-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-purple-500"></div>
+                            </label>
+                        </div>
+
+                    </div>
+
+                    <!-- Live Meter Visualizer -->
+                    <div class="mt-6 p-4 rounded-xl bg-slate-950 border border-slate-800 space-y-2">
+                        <div class="flex justify-between text-xs font-mono">
+                            <span class="text-slate-400">USB Belasting Capatiteit (Max 2.0A):</span>
+                            <span id="load-percentage" class="text-cyan-400 font-bold">42.5%</span>
+                        </div>
+                        <div class="w-full h-3 bg-slate-800 rounded-full overflow-hidden p-0.5">
+                            <div id="load-bar" class="h-full bg-gradient-to-r from-emerald-500 via-cyan-500 to-amber-500 rounded-full transition-all duration-500" style="width: 42.5%"></div>
+                        </div>
+                    </div>
+
+                </div>
+
+                <!-- Live Project Overview Card -->
+                <div class="glass-panel p-6 rounded-2xl border border-slate-800 flex flex-col justify-between">
+                    <div>
+                        <div class="flex items-center gap-3 mb-4">
+                            <div class="p-2.5 rounded-lg bg-amber-500/10 text-amber-400 border border-amber-500/30">
+                                <i class="fa-solid fa-box-open"></i>
+                            </div>
+                            <h2 class="text-lg font-bold text-slate-100">Over de Elektrodoos</h2>
+                        </div>
+                        <p class="text-sm text-slate-300 leading-relaxed mb-4">
+                            Met dit zelfgebouwde project laat Quinten (13 jaar) zien hoe je met eenvoudige middelen, USB-kabels, soldeerwerk en stekkertjes een complete modulaire elektrodoos bouwt!
+                        </p>
+                        <ul class="space-y-2.5 text-xs text-slate-300">
+                            <li class="flex items-center gap-2">
+                                <i class="fa-solid fa-check text-emerald-400"></i> Werkt op elke standaard 5V USB Powerbank of Oplader
+                            </li>
+                            <li class="flex items-center gap-2">
+                                <i class="fa-solid fa-check text-emerald-400"></i> Modulair ontworpen met snelle steekstekkertjes
+                            </li>
+                            <li class="flex items-center gap-2">
+                                <i class="fa-solid fa-check text-emerald-400"></i> Hergebruik van oude pc-onderdelen (Upcycling)
+                            </li>
+                        </ul>
+                    </div>
+
+                    <div class="mt-6 pt-4 border-t border-slate-800/80 flex items-center justify-between">
+                        <div class="flex items-center gap-2">
+                            <div class="w-8 h-8 rounded-full bg-cyan-500/20 text-cyan-400 border border-cyan-500/40 flex items-center justify-center font-bold text-xs">
+                                QM
+                            </div>
+                            <div>
+                                <p class="text-xs font-bold text-slate-200">Quinten Muskens</p>
+                                <p class="text-[10px] text-slate-400">Jonge Maker & Uitvinder</p>
+                            </div>
+                        </div>
+                        <span class="text-xs font-mono text-cyan-400 bg-cyan-950/60 px-2.5 py-1 rounded-lg border border-cyan-800">
+                            v2.0 Elektro
+                        </span>
+                    </div>
+                </div>
+
+            </div>
+
+        </div>
+
+        <!-- ==================== TAB 2: FAN LAB SIMULATION ==================== -->
+        <div id="tab-fan-lab" class="tab-content hidden space-y-6 max-w-7xl mx-auto">
+            
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                
+                <!-- Fan Visualizer Box -->
+                <div class="glass-panel p-8 rounded-2xl border border-slate-800 flex flex-col items-center justify-center relative overflow-hidden">
+                    <div class="absolute top-4 left-4 flex items-center gap-2 text-xs font-mono text-slate-400">
+                        <span class="w-2 h-2 rounded-full bg-cyan-400"></span> REALTIME FAN SIMULATIE
+                    </div>
+
+                    <!-- Interactive Glowing Fan Graphics -->
+                    <div class="relative my-8">
+                        <!-- Outer Frame -->
+                        <div class="w-64 h-64 md:w-80 md:h-80 rounded-3xl bg-slate-900 border-4 border-slate-700 flex items-center justify-center relative shadow-2xl">
+                            <!-- Corner Screws -->
+                            <div class="absolute top-3 left-3 w-4 h-4 rounded-full bg-slate-800 border border-slate-600"></div>
+                            <div class="absolute top-3 right-3 w-4 h-4 rounded-full bg-slate-800 border border-slate-600"></div>
+                            <div class="absolute bottom-3 left-3 w-4 h-4 rounded-full bg-slate-800 border border-slate-600"></div>
+                            <div class="absolute bottom-3 right-3 w-4 h-4 rounded-full bg-slate-800 border border-slate-600"></div>
+
+                            <!-- Circular Fan Ring -->
+                            <div class="w-56 h-56 md:w-72 md:h-72 rounded-full border-4 border-slate-800 bg-slate-950 flex items-center justify-center relative overflow-hidden">
+                                
+                                <!-- Animated Fan Blades -->
+                                <div id="fan-blade-container" class="w-full h-full absolute inset-0 flex items-center justify-center fan-blade-spin" style="animation-duration: 0s;">
+                                    <!-- Fan Blade Elements -->
+                                    <svg class="w-48 h-48 md:w-60 md:h-60 text-cyan-500 drop-shadow-[0_0_12px_rgba(0,240,255,0.6)]" viewBox="0 0 100 100" fill="currentColor">
+                                        <!-- Central Hub & Curved Blades -->
+                                        <circle cx="50" cy="50" r="16" fill="#0f172a" stroke="#00f0ff" stroke-width="2"/>
+                                        <path d="M 50,34 C 40,15 20,20 25,35 C 28,42 40,45 50,34 Z" opacity="0.85"/>
+                                        <path d="M 66,50 C 85,40 80,20 65,25 C 58,28 55,40 66,50 Z" opacity="0.85"/>
+                                        <path d="M 50,66 C 60,85 80,80 75,65 C 72,58 60,55 50,66 Z" opacity="0.85"/>
+                                        <path d="M 34,50 C 15,60 20,80 35,75 C 42,72 45,60 34,50 Z" opacity="0.85"/>
+                                    </svg>
+                                </div>
+
+                                <!-- Center Hub Cap -->
+                                <div class="w-16 h-16 rounded-full bg-slate-900 border-2 border-cyan-400 shadow-neon-blue flex items-center justify-center z-10">
+                                    <i class="fa-solid fa-bolt text-cyan-400 text-lg"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Speedometer & Status Readout -->
+                    <div class="flex items-center gap-8 font-mono">
+                        <div class="text-center">
+                            <p class="text-xs text-slate-400">TOEREN (RPM)</p>
+                            <p id="rpm-display" class="text-3xl font-extrabold text-cyan-400 mt-0.5">0</p>
+                        </div>
+                        <div class="w-px h-10 bg-slate-800"></div>
+                        <div class="text-center">
+                            <p class="text-xs text-slate-400">SPANNING (V)</p>
+                            <p id="fan-volts-display" class="text-3xl font-extrabold text-emerald-400 mt-0.5">0.0V</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Controls & Explanation -->
+                <div class="space-y-6 flex flex-col justify-between">
+                    <div class="glass-panel p-6 rounded-2xl border border-slate-800">
+                        <h3 class="text-lg font-bold text-slate-100 mb-2 flex items-center gap-2">
+                            <i class="fa-solid fa-sliders text-cyan-400"></i> Fan Snelheid Instellen
+                        </h3>
+                        <p class="text-xs text-slate-400 mb-6">
+                            Regel de virtuele spanning op de PC-fan. Zie hoe de rotatiesnelheid en het luchtdebiet veranderen.
+                        </p>
+
+                        <!-- Speed Buttons Grid -->
+                        <div class="grid grid-cols-2 sm:grid-cols-5 gap-3 mb-6">
+                            <button onclick="setFanSpeed(0)" id="speed-btn-0" class="fan-speed-btn p-3 rounded-xl border border-cyan-500 bg-cyan-500/20 text-cyan-300 font-bold text-sm transition">
+                                OFF
+                            </button>
+                            <button onclick="setFanSpeed(1)" id="speed-btn-1" class="fan-speed-btn p-3 rounded-xl border border-slate-800 bg-slate-900 text-slate-400 font-bold text-sm hover:border-slate-700 transition">
+                                LOW (3V)
+                            </button>
+                            <button onclick="setFanSpeed(2)" id="speed-btn-2" class="fan-speed-btn p-3 rounded-xl border border-slate-800 bg-slate-900 text-slate-400 font-bold text-sm hover:border-slate-700 transition">
+                                MED (4V)
+                            </button>
+                            <button onclick="setFanSpeed(3)" id="speed-btn-3" class="fan-speed-btn p-3 rounded-xl border border-slate-800 bg-slate-900 text-slate-400 font-bold text-sm hover:border-slate-700 transition">
+                                HIGH (5V)
+                            </button>
+                            <button onclick="setFanSpeed(4)" id="speed-btn-4" class="fan-speed-btn p-3 rounded-xl border border-slate-800 bg-slate-900 text-slate-400 font-bold text-sm hover:border-slate-700 transition col-span-2 sm:col-span-1">
+                                TURBO⚡
+                            </button>
+                        </div>
+
+                        <!-- Technical Fan Specs -->
+                        <div class="p-4 rounded-xl bg-slate-950 border border-slate-800 space-y-2 text-xs">
+                            <div class="flex justify-between">
+                                <span class="text-slate-400">Originele Fan Rating:</span>
+                                <span class="text-slate-200 font-mono">12V DC (PC-Standaard)</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span class="text-slate-400">Aangepaste USB Voeding:</span>
+                                <span class="text-emerald-400 font-mono font-bold">5V DC (Stil & Veilig)</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span class="text-slate-400">Luchtverplaatsing:</span>
+                                <span id="airflow-display" class="text-cyan-400 font-mono">0 CFM (Kubieke Voet/Min)</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Explanation Card -->
+                    <div class="glass-card p-6 rounded-2xl border border-slate-800">
+                        <h4 class="font-bold text-slate-200 text-sm mb-2 flex items-center gap-2">
+                            <i class="fa-solid fa-lightbulb text-amber-400"></i> Quinten's Slimme Truk: 12V Fan op 5V USB
+                        </h4>
+                        <p class="text-xs text-slate-300 leading-relaxed">
+                            Aangezien pc-fans normaal op <strong>12 Volt</strong> werken en USB-poorten <strong>5 Volt</strong> leveren, draait de fan iets langzamer dan in een computer. Dit heeft een groot voordeel: hij is super stil en verbruikt heel weinig stroom, perfect voor een draagbare koeldoos!
+                        </p>
+                    </div>
+                </div>
+
+            </div>
+
+        </div>
+
+        <!-- ==================== TAB 3: COMPONENTS OVERVIEW ==================== -->
+        <div id="tab-components" class="tab-content hidden space-y-6 max-w-7xl mx-auto">
+            
+            <div class="text-center max-w-2xl mx-auto mb-8">
+                <h2 class="text-2xl font-bold text-slate-100">Bouwstenen van de Elektrodoos</h2>
+                <p class="text-sm text-slate-400 mt-1">
+                    Bekijk alle onderdelen die Quinten gebruikt heeft om deze modulaire USB opstelling te maken.
+                </p>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                
+                <!-- Component 1: PC Fans -->
+                <div class="glass-panel p-6 rounded-2xl border border-slate-800 hover:border-cyan-500/50 transition group">
+                    <div class="w-12 h-12 rounded-xl bg-cyan-500/10 text-cyan-400 border border-cyan-500/30 flex items-center justify-center text-2xl mb-4 group-hover:scale-110 transition">
+                        <i class="fa-solid fa-fan"></i>
+                    </div>
+                    <h3 class="text-lg font-bold text-slate-100">PC-Fans / Ventilatoren</h3>
+                    <p class="text-xs text-slate-400 mt-1 font-mono">Type: 80mm & 120mm Brushless Fans</p>
+                    <p class="text-sm text-slate-300 mt-3 leading-relaxed">
+                        Hergebruikte computer koelers. Quinten heeft de connectoren aangepast met USB-kabels zodat ze direct op powerbanks werken voor koeling op het bureau.
+                    </p>
+                    <div class="mt-4 pt-3 border-t border-slate-800 flex justify-between items-center text-xs text-cyan-400 font-semibold">
+                        <span>Voeding: 5V USB</span>
+                        <span>Stil & Efficiënt</span>
+                    </div>
+                </div>
+
+                <!-- Component 2: USB LED Strip & Lights -->
+                <div class="glass-panel p-6 rounded-2xl border border-slate-800 hover:border-amber-500/50 transition group">
+                    <div class="w-12 h-12 rounded-xl bg-amber-500/10 text-amber-400 border border-amber-500/30 flex items-center justify-center text-2xl mb-4 group-hover:scale-110 transition">
+                        <i class="fa-solid fa-lightbulb"></i>
+                    </div>
+                    <h3 class="text-lg font-bold text-slate-100">USB Lampjes & LED Strips</h3>
+                    <p class="text-xs text-slate-400 mt-1 font-mono">Type: 5V COB & SMD LEDs</p>
+                    <p class="text-sm text-slate-300 mt-3 leading-relaxed">
+                        Heldere sfeerverlichting en indicators. Deze zorgen ervoor dat je goed kunt zien welke onderdelen ingeschakeld zijn en geven de doos een stoere neon glow.
+                    </p>
+                    <div class="mt-4 pt-3 border-t border-slate-800 flex justify-between items-center text-xs text-amber-400 font-semibold">
+                        <span>Lichtopbrengst: Warm/Neon</span>
+                        <span>Lage warmte</span>
+                    </div>
+                </div>
+
+                <!-- Component 3: Modular Connectors -->
+                <div class="glass-panel p-6 rounded-2xl border border-slate-800 hover:border-emerald-500/50 transition group">
+                    <div class="w-12 h-12 rounded-xl bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 flex items-center justify-center text-2xl mb-4 group-hover:scale-110 transition">
+                        <i class="fa-solid fa-plug"></i>
+                    </div>
+                    <h3 class="text-lg font-bold text-slate-100">Stekkertjes & Verdeeldoos</h3>
+                    <p class="text-xs text-slate-400 mt-1 font-mono">Type: JST / Dupont / USB-A Pluggen</p>
+                    <p class="text-sm text-slate-300 mt-3 leading-relaxed">
+                        Door slimme snel-stekkertjes te solderen is de doos compleet modulair. Je kunt naar wens fans en lampjes in- en uitpluggen net als een echte mengtafel.
+                    </p>
+                    <div class="mt-4 pt-3 border-t border-slate-800 flex justify-between items-center text-xs text-emerald-400 font-semibold">
+                        <span>Modulair: Ja</span>
+                        <span>Snelkoppeling</span>
+                    </div>
+                </div>
+
+                <!-- Component 4: USB Cable Wiring -->
+                <div class="glass-panel p-6 rounded-2xl border border-slate-800 hover:border-purple-500/50 transition group">
+                    <div class="w-12 h-12 rounded-xl bg-purple-500/10 text-purple-400 border border-purple-500/30 flex items-center justify-center text-2xl mb-4 group-hover:scale-110 transition">
+                        <i class="fa-solid fa-network-wired"></i>
+                    </div>
+                    <h3 class="text-lg font-bold text-slate-100">Bedrading & Strippen</h3>
+                    <p class="text-xs text-slate-400 mt-1 font-mono">Type: 22AWG Koperdraad (Rood/Zwart)</p>
+                    <p class="text-sm text-slate-300 mt-3 leading-relaxed">
+                        De USB-kabels zijn gestript om de rode (+5V) en zwarte (GND) draden te scheiden. Nette isolatie met krimpkousen zorgt voor een veilige werking.
+                    </p>
+                    <div class="mt-4 pt-3 border-t border-slate-800 flex justify-between items-center text-xs text-purple-400 font-semibold">
+                        <span>Veiligheid: Krimpkous</span>
+                        <span>2-Aderig Power</span>
+                    </div>
+                </div>
+
+                <!-- Component 5: Control Switches -->
+                <div class="glass-panel p-6 rounded-2xl border border-slate-800 hover:border-blue-500/50 transition group">
+                    <div class="w-12 h-12 rounded-xl bg-blue-500/10 text-blue-400 border border-blue-500/30 flex items-center justify-center text-2xl mb-4 group-hover:scale-110 transition">
+                        <i class="fa-solid fa-[#00f0ff] fa-toggle-on"></i>
+                    </div>
+                    <h3 class="text-lg font-bold text-slate-100">Schakelaars & Tuimelschakelaars</h3>
+                    <p class="text-xs text-slate-400 mt-1 font-mono">Type: Rocker Switches 12V/250V rated</p>
+                    <p class="text-sm text-slate-300 mt-3 leading-relaxed">
+                        Hiermee kun je direct de stroom onderbreken per kanaal zonder de USB-kabel los te hoeven trekken.
+                    </p>
+                    <div class="mt-4 pt-3 border-t border-slate-800 flex justify-between items-center text-xs text-blue-400 font-semibold">
+                        <span>Aan/Uit Schakelbaar</span>
+                        <span>Mechanisch</span>
+                    </div>
+                </div>
+
+                <!-- Component 6: Protective Case -->
+                <div class="glass-panel p-6 rounded-2xl border border-slate-800 hover:border-red-500/50 transition group">
+                    <div class="w-12 h-12 rounded-xl bg-red-500/10 text-red-400 border border-red-500/30 flex items-center justify-center text-2xl mb-4 group-hover:scale-110 transition">
+                        <i class="fa-solid fa-box"></i>
+                    </div>
+                    <h3 class="text-lg font-bold text-slate-100">Project Behuizing (De Doos)</h3>
+                    <p class="text-xs text-slate-400 mt-1 font-mono">Type: Kunststof Projectbox</p>
+                    <p class="text-sm text-slate-300 mt-3 leading-relaxed">
+                        Een stevige behuizing waar alle kabels netjes in weggewerkt zijn. Met uitgesneden poorten voor de stekkertjes en schakelaars.
+                    </p>
+                    <div class="mt-4 pt-3 border-t border-slate-800 flex justify-between items-center text-xs text-red-400 font-semibold">
+                        <span>Inbouw</span>
+                        <span>Stofvrij</span>
+                    </div>
+                </div>
+
+            </div>
+
+        </div>
+
+        <!-- ==================== TAB 4: EDUCATIONAL / HOW IT WORKS ==================== -->
+        <div id="tab-education" class="tab-content hidden space-y-6 max-w-7xl mx-auto">
+            
+            <!-- Intro Banner -->
+            <div class="glass-panel p-8 rounded-2xl border border-slate-800 bg-gradient-to-r from-slate-900 via-slate-900 to-cyan-950/40">
+                <div class="max-w-3xl">
+                    <span class="px-3 py-1 bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 text-xs font-bold rounded-lg uppercase tracking-wider">
+                        Educatieve Uitleg
+                    </span>
+                    <h2 class="text-2xl md:text-3xl font-extrabold text-slate-100 mt-3">
+                        Hoe werkt elektro op een USB-kabel?
+                    </h2>
+                    <p class="text-sm text-slate-300 mt-2 leading-relaxed">
+                        Een USB-kabel heeft normaal 4 draden aan de binnenkant. Voor Quinten's Elektrodoos hebben we alleen de voedingsdraden nodig!
+                    </p>
+                </div>
+            </div>
+
+            <!-- Diagrams Grid -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                
+                <!-- USB Wire Breakdown Card -->
+                <div class="glass-panel p-6 rounded-2xl border border-slate-800">
+                    <h3 class="text-lg font-bold text-slate-100 mb-4 flex items-center gap-2">
+                        <i class="fa-solid fa-bolt text-amber-400"></i> De Anatomie van een USB Kijkkabel
+                    </h3>
+
+                    <div class="space-y-4">
+                        <!-- Wire 1: Red -->
+                        <div class="p-3 rounded-xl bg-red-950/30 border border-red-500/30 flex items-center justify-between">
+                            <div class="flex items-center gap-3">
+                                <div class="w-4 h-4 rounded-full bg-red-500 shadow-[0_0_10px_rgba(239,68,68,0.8)]"></div>
+                                <div>
+                                    <h4 class="font-bold text-slate-200 text-sm">Rode Draad (+5V)</h4>
+                                    <p class="text-xs text-slate-400">De Positieve stroomdraad (Plus)</p>
+                                </div>
+                            </div>
+                            <span class="font-mono text-xs text-red-400 font-bold">+5 Volt DC</span>
+                        </div>
+
+                        <!-- Wire 2: Black -->
+                        <div class="p-3 rounded-xl bg-slate-900 border border-slate-700 flex items-center justify-between">
+                            <div class="flex items-center gap-3">
+                                <div class="w-4 h-4 rounded-full bg-slate-400"></div>
+                                <div>
+                                    <h4 class="font-bold text-slate-200 text-sm">Zwarte Draad (GND / Min)</h4>
+                                    <p class="text-xs text-slate-400">De Massa / Negatieve draad (Minstroom)</p>
+                                </div>
+                            </div>
+                            <span class="font-mono text-xs text-slate-400 font-bold">0 Volt (GND)</span>
+                        </div>
+
+                        <!-- Wire 3 & 4: Data -->
+                        <div class="p-3 rounded-xl bg-slate-950 border border-slate-800 flex items-center justify-between opacity-60">
+                            <div class="flex items-center gap-3">
+                                <div class="w-4 h-4 rounded-full bg-emerald-500/50"></div>
+                                <div>
+                                    <h4 class="font-bold text-slate-300 text-sm">Groen & Wit (Data + / Data -)</h4>
+                                    <p class="text-xs text-slate-500">Gegevensoverdracht (Niet gebruikt in dit project)</p>
+                                </div>
+                            </div>
+                            <span class="font-mono text-xs text-slate-500">Niet Aangesloten</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Circuit Principle -->
+                <div class="glass-panel p-6 rounded-2xl border border-slate-800">
+                    <h3 class="text-lg font-bold text-slate-100 mb-4 flex items-center gap-2">
+                        <i class="fa-solid fa-diagram-project text-cyan-400"></i> Parallel Schakelen van Lampjes & Fans
+                    </h3>
+                    <p class="text-xs text-slate-300 leading-relaxed mb-4">
+                        In Quinten's Elektrodoos zijn alle onderdelen <strong>Parallel</strong> geschakeld. Dit betekent dat elk lampje en elke fan direct de volle 5 Volt van de USB-stekker krijgt!
+                    </p>
+
+                    <div class="p-4 bg-slate-950 rounded-xl border border-slate-800 space-y-3 font-mono text-xs">
+                        <div class="flex items-center justify-between text-cyan-400 border-b border-slate-800 pb-2">
+                            <span>USB Voeding (5V)</span>
+                            <i class="fa-solid fa-arrow-right"></i>
+                            <span>Verdeelde Plus/Min Rails</span>
+                        </div>
+                        <div class="pl-4 border-l-2 border-cyan-500 space-y-2">
+                            <div class="flex justify-between text-slate-300">
+                                <span>├─ Fan 1 (12V Fan op 5V)</span>
+                                <span class="text-emerald-400">5.0 V</span>
+                            </div>
+                            <div class="flex justify-between text-slate-300">
+                                <span>├─ LED Strip Light</span>
+                                <span class="text-emerald-400">5.0 V</span>
+                            </div>
+                            <div class="flex justify-between text-slate-300">
+                                <span>└─ Mini Spotlight</span>
+                                <span class="text-emerald-400">5.0 V</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mt-4 p-3 rounded-xl bg-cyan-950/30 border border-cyan-500/20 text-xs text-cyan-300">
+                        <i class="fa-solid fa-circle-info mr-1"></i> Als je één lampje loskoppelt, blijven de PC-fans gewoon doordraaien!
+                    </div>
+                </div>
+
+            </div>
+
+        </div>
+
+    </main>
+
+    <footer class="h-14 glass-panel border-t border-slate-800 px-6 flex items-center justify-between text-xs text-slate-400 shrink-0 z-20">
+        <div class="flex items-center gap-4">
+            <span class="flex items-center gap-2 text-emerald-400 font-semibold">
+                <i class="fa-solid fa-shield-virus"></i> USB 5V Laagspanning (Veilig voor Maker Projecten)
+            </span>
+        </div>
+
+        <div class="flex items-center gap-4">
+            <span>Ontworpen door Quinten Muskens (13)</span>
+            <span class="text-slate-600">|</span>
+            <span class="text-cyan-400 font-mono">Interactive Kiosk Display</span>
+        </div>
+    </footer>
+
+    <script>
+        /* ==================== GLOBAL STATE & VARIABLES ==================== */
+        let currentFanSpeedIndex = 3; // Default HIGH (5V)
+        let fanRpm = 1800;
+        let isFullscreen = false;
+
+        const fanSpeeds = [
+            { name: "OFF", voltage: 0.0, rpm: 0, current: 0.0, airflow: 0 },
+            { name: "LOW", voltage: 3.0, rpm: 900, current: 0.15, airflow: 12 },
+            { name: "MED", voltage: 4.0, rpm: 1350, current: 0.25, airflow: 20 },
+            { name: "HIGH", voltage: 5.0, rpm: 1800, current: 0.35, airflow: 32 },
+            { name: "TURBO", voltage: 5.2, rpm: 2200, current: 0.45, airflow: 40 }
+        ];
+
+        /* ==================== CLOCK & TIME UPDATER ==================== */
+        function updateClock() {
+            const now = new Date();
+            const hours = String(now.getHours()).padStart(2, '0');
+            const minutes = String(now.getMinutes()).padStart(2, '0');
+            const seconds = String(now.getSeconds()).padStart(2, '0');
+            
+            document.getElementById('live-time').innerText = `${hours}:${minutes}:${seconds}`;
+
+            const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+            const dateStr = now.toLocaleDateString('nl-NL', options);
+            // Capitalize first letter
+            document.getElementById('live-date').innerText = dateStr.charAt(0).toUpperCase() + dateStr.slice(1);
+        }
+        setInterval(updateClock, 1000);
+        updateClock();
+
+        /* ==================== TAB NAVIGATION ==================== */
+        function switchTab(tabId) {
+            // Hide all tab contents
+            const contents = document.querySelectorAll('.tab-content');
+            contents.forEach(el => el.classList.add('hidden'));
+
+            // Reset tab button styles
+            const tabBtns = document.querySelectorAll('.tab-btn');
+            tabBtns.forEach(btn => {
+                btn.className = "tab-btn px-5 py-2.5 rounded-xl font-semibold text-sm transition flex items-center gap-2 bg-slate-800/60 text-slate-400 border border-transparent hover:text-slate-200";
+            });
+
+            // Show target content
+            const targetContent = document.getElementById(`tab-${tabId}`);
+            if (targetContent) {
+                targetContent.classList.remove('hidden');
+            }
+
+            // Highlight active button
+            const activeBtn = document.getElementById(`tab-btn-${tabId}`);
+            if (activeBtn) {
+                activeBtn.className = "tab-btn px-5 py-2.5 rounded-xl font-semibold text-sm transition flex items-center gap-2 bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 shadow-neon-blue";
+            }
+        }
+
+        /* ==================== FAN LAB CONTROLS ==================== */
+        function setFanSpeed(index) {
+            currentFanSpeedIndex = index;
+            const config = fanSpeeds[index];
+
+            // Update Fan Display Values
+            document.getElementById('rpm-display').innerText = config.rpm;
+            document.getElementById('fan-volts-display').innerText = `${config.voltage.toFixed(1)}V`;
+            document.getElementById('airflow-display').innerText = `${config.airflow} CFM (Kubieke Voet/Min)`;
+
+            // Update CSS Animation Duration for Fan Blade
+            const bladeContainer = document.getElementById('fan-blade-container');
+            if (config.rpm === 0) {
+                bladeContainer.style.animationDuration = '0s';
+            } else {
+                // Calculate rotation duration in seconds based on RPM
+                const duration = 60 / config.rpm;
+                bladeContainer.style.animationDuration = `${duration}s`;
+            }
+
+            // Highlight Active Button
+            for (let i = 0; i < 5; i++) {
+                const btn = document.getElementById(`speed-btn-${i}`);
+                if (i === index) {
+                    btn.className = "fan-speed-btn p-3 rounded-xl border border-cyan-500 bg-cyan-500/20 text-cyan-300 font-bold text-sm transition shadow-neon-blue";
+                } else {
+                    btn.className = "fan-speed-btn p-3 rounded-xl border border-slate-800 bg-slate-900 text-slate-400 font-bold text-sm hover:border-slate-700 transition";
+                }
+            }
+
+            // Also update power calculations on dashboard if fan switch is on
+            updatePowerSimulation();
+        }
+
+        /* ==================== POWER SIMULATION LOGIC ==================== */
+        function updatePowerSimulation() {
+            const isFanOn = document.getElementById('switch-fan').checked;
+            const isLedOn = document.getElementById('switch-led').checked;
+            const isSpotOn = document.getElementById('switch-spot').checked;
+            const isExtraOn = document.getElementById('switch-extra').checked;
+
+            let totalCurrent = 0.0;
+            let activeCount = 0;
+
+            if (isFanOn) {
+                totalCurrent += fanSpeeds[currentFanSpeedIndex].current;
+                activeCount++;
+                document.getElementById('icon-mod-fan').className = "p-3 rounded-xl bg-cyan-500/20 text-cyan-400 text-xl shadow-neon-blue";
+            } else {
+                document.getElementById('icon-mod-fan').className = "p-3 rounded-xl bg-slate-800 text-slate-600 text-xl";
+            }
+
+            if (isLedOn) {
+                totalCurrent += 0.40;
+                activeCount++;
+                document.getElementById('icon-mod-led').className = "p-3 rounded-xl bg-amber-500/20 text-amber-400 text-xl shadow-neon-amber";
+            } else {
+                document.getElementById('icon-mod-led').className = "p-3 rounded-xl bg-slate-800 text-slate-600 text-xl";
+            }
+
+            if (isSpotOn) {
+                totalCurrent += 0.10;
+                activeCount++;
+                document.getElementById('icon-mod-spot').className = "p-3 rounded-xl bg-emerald-500/20 text-emerald-400 text-xl shadow-neon-green";
+            } else {
+                document.getElementById('icon-mod-spot').className = "p-3 rounded-xl bg-slate-800 text-slate-600 text-xl";
+            }
+
+            if (isExtraOn) {
+                totalCurrent += 0.25;
+                activeCount++;
+                document.getElementById('icon-mod-extra').className = "p-3 rounded-xl bg-purple-500/20 text-purple-400 text-xl";
+            } else {
+                document.getElementById('icon-mod-extra').className = "p-3 rounded-xl bg-slate-800 text-slate-600 text-xl";
+            }
+
+            const totalWattage = 5.0 * totalCurrent;
+            const maxCapacity = 2.0; // Max 2.0 Amps for standard USB hub
+            const loadPercent = Math.min(100, (totalCurrent / maxCapacity) * 100);
+
+            // Render stats
+            document.getElementById('stat-current').innerText = `${totalCurrent.toFixed(2)} A`;
+            document.getElementById('stat-wattage').innerText = totalWattage.toFixed(2);
+            document.getElementById('stat-modules-count').innerText = `${activeCount} / 4`;
+            
+            document.getElementById('load-percentage').innerText = `${loadPercent.toFixed(1)}%`;
+            document.getElementById('load-bar').style.width = `${loadPercent}%`;
+        }
+
+        function toggleAllModules() {
+            const switches = ['switch-fan', 'switch-led', 'switch-spot', 'switch-extra'];
+            const firstState = document.getElementById(switches[0]).checked;
+            
+            switches.forEach(id => {
+                document.getElementById(id).checked = !firstState;
+            });
+
+            updatePowerSimulation();
+        }
+
+        /* ==================== FULLSCREEN TOGGLE ==================== */
+        function toggleFullscreen() {
+            if (!document.fullscreenElement) {
+                document.documentElement.requestFullscreen().catch(err => {
+                    console.log(`Error attempting to enable fullscreen: ${err.message}`);
+                });
+            } else {
+                if (document.exitFullscreen) {
+                    document.exitFullscreen();
+                }
+            }
+        }
+
+        /* ==================== INIT ON LOAD ==================== */
+        window.onload = function() {
+            setFanSpeed(3); // Start with HIGH
+            updatePowerSimulation();
+        };
+    </script>
+</body>
+</html>
