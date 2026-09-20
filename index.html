@@ -881,7 +881,21 @@
             updatePowerSimulation();
         };
     </script>
-    <!-- Kiosk Afsluitknop -->
+<!-- IP Adres Display -->
+<div style="
+  background: rgba(0, 240, 255, 0.1);
+  border: 2px dashed #00f0ff;
+  border-radius: 12px;
+  padding: 15px 25px;
+  display: inline-block;
+  box-shadow: 0 0 20px rgba(0, 240, 255, 0.2);
+  text-align: center;
+">
+  <div style="color: #a0aec0; font-size: 0.85rem; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 5px; font-family: sans-serif;">IP-Adres Pi</div>
+  <div id="ip-display" style="color: #00f0ff; font-size: 2.2rem; font-weight: bold; font-family: monospace;">Zoeken...</div>
+</div>
+
+        <!-- Kiosk Afsluitknop -->
 <button onclick="sluitApparaatAf()" class="shutdown-btn">
   🔌 Apparaat Afsluiten
 </button>
@@ -918,6 +932,40 @@ function sluitApparaatAf() {
   background: #cc0000;
 }
 </style>
+<script>
+  function haalIPOp() {
+    const ipEl = document.getElementById('ip-display');
+    let host = window.location.hostname;
+
+    // Als de pagina via netwerk gehost wordt (bijv. http://192.168.1.15)
+    if (host && host !== 'localhost' && host !== '127.0.0.1' && host !== '') {
+      ipEl.innerText = host;
+    } else {
+      // Als het bestand lokaal geopend wordt, zoek via WebRTC
+      const pc = new RTCPeerConnection({ iceServers: [] });
+      pc.createDataChannel('');
+      pc.createOffer().then(offer => pc.setLocalDescription(offer));
+      
+      pc.onicecandidate = (ice) => {
+        if (!ice || !ice.candidate) return;
+        const match = /([0-9]{1,3}(\.[0-9]{1,3}){3})/.exec(ice.candidate.candidate);
+        if (match) {
+          ipEl.innerText = match[1];
+          pc.onicecandidate = () => {};
+        }
+      };
+
+      setTimeout(() => {
+        if (ipEl.innerText === 'Zoeken...') {
+          ipEl.innerText = 'Geen IP gevonden';
+        }
+      }, 2500);
+    }
+  }
+
+  // Voer uit bij het laden van de pagina
+  haalIPOp();
+</script>
 
 </body>
 </html>
